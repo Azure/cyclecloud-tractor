@@ -1,0 +1,7 @@
+[Service]
+# Override the user owning the tractor-blade process.
+User=<%= node['tractor']['user']['name'] %>
+
+<% node['tractor']['blade']['overrides'].each_pair do |key,value| -%>
+   <%= key %> = <%= value %>
+<% end -%>

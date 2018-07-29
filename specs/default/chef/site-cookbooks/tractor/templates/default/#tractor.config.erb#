@@ -1,0 +1,10 @@
+{
+  "LicenseLocation": "<%= node['tractor']['license_server']['port'] %>@<%= node['tractor']['license_server']['address'] %>",
+  "EngineOwner": "<%= node['tractor']['user']['name'] %>",
+  "ListenerPort": <%= node['tractor']['engine']['port'] %>,
+  "TractorDataDirectory": "<%= node['tractor']['data_dir'] %>",
+  "SiteCmdLogServerStartup":
+    "'${TractorInstallDirectory}/bin/tractor-cmdlogger' --filetemplate='${TractorDataDirectory}/cmd-logs/%u/J%j/T%t.log' --port=9180",
+  "SiteCmdLogRetrievalURL": "/tractor/cmd-logs/%u/J%j/T%t.log",
+}
+

@@ -1,0 +1,13 @@
+# The following variables can be overridden in order to configure
+# the tractor-blade service.  This file is expected to be installed as
+# /etc/sysconfig/tractor-blade
+
+# BIN determines the directory containing the tractor-blade executable
+#BIN=/opt/pixar/Tractor-2.2/bin
+
+# OPTIONS are the set of options passed to tractor-blade.
+# tractor-blade --help shows a list of possible options.
+#OPTIONS="--debug --maxsleep 60  --engine otherhost:8081"
+
+OPTIONS='<%= node['tractor']['blade']['cmd_options'] %>'
+

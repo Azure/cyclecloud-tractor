@@ -1,0 +1,281 @@
+########################################
+## Pixar Tractor and Blender Render Farm
+########################################
+
+[noderef filer]
+SourceClusterName = $FileSystemClusterName
+
+
+[cluster TractorRenderFarm]
+FormLayout = selectionpanel
+Category = Animation and Rendering
+IconUrl = http://download.cyclecomputing.com/logos/tractor-192x192.png
+
+Autoscale = $Autoscale
+
+    [[node defaults]]
+    UsePublicNetwork = $UsePublicNetwork    
+    Credentials = $Credentials    
+    ImageName = cycle.image.centos7
+    SubnetId = $SubnetId
+    Region = $Region
+    KeyPairLocation = $KeyPairLocation
+
+    AdditionalClusterInitSpecs = $DefaultClusterInitSpecs
+    
+        [[[configuration tractor]]]
+        license_server.address = $configuration_tractor_license_server_address
+        license_server.port = $configuration_tractor_license_server_port
+        engine.port = $configuration_tractor_engine_port
+
+
+        [[[configuration blender]]]
+        version = 2.79b-linux-glibc219-x86_64
+
+        [[[configuration cyclecloud.mounts.nfs]]]
+        type = nfs
+        export_path = $ExportPath
+        mountpoint = $MountPoint
+        address = ${filer.instance.PrivateIp}
+
+        [[[cluster-init tractor:default:1.0.0]]]
+        [[[cluster-init blender:default:1.0.0]]]
+
+
+    [[node master]]
+    MachineType = $MasterMachineType
+    IsReturnProxy = $ReturnProxy
+    AdditionalClusterInitSpecs = $MasterClusterInitSpecs
+
+        [[[cluster-init tractor:engine:1.0.0]]]
+        
+        [[[network-interface eth0]]]
+        AssociatePublicIpAddress = $UsePublicNetwork
+
+        [[[input-endpoint http]]]
+        PrivatePort = $configuration_tractor_engine_port
+        PublicPort = $configuration_tractor_engine_port
+
+        [[[input-endpoint ganglia]]]
+        PrivatePort = 8652
+        PublicPort = 8652        
+
+    [[nodearray execute]]
+    MachineType = $ExecuteMachineType
+    MaxCoreCount = $MaxExecuteCoreCount
+
+    Interruptible = $UseLowPrio
+    AdditionalClusterInitSpecs = $ExecuteClusterInitSpecs
+
+        [[[cluster-init tractor:blade:1.0.0]]]
+        
+        [[[network-interface eth0]]]
+        AssociatePublicIpAddress = false
+
+
+[parameters About]
+Order = 1
+
+    [[parameters About Tractor]]
+
+        [[[parameter TractorDescription]]]
+        HideLabel = true
+        Config.Plugin = pico.widget.HtmlTemplateWidget
+        Config.Template = '''
+        <table>
+          <tr>
+            <td><img src='https://s3.amazonaws.com/download.cyclecomputing.com/logos/tractor-192x192.png' width='192' height='192'></td>
+            <td><img src='https://s3.amazonaws.com/download.cyclecomputing.com/logos/blender-socket-192x60.png' width='192' height='60'></td>
+          </tr>
+        </table>
+        <table>
+          <tr>
+            <td><p>This cluster installs Blender alongside Tractor for Batch Rendering.</p></td></tr><tr><td><p>Tractor is a render farm job queue and work distribution system.</p>
+            <br>
+            <p>See the <a href=\"https://rmanwiki.pixar.com/display/TRA/Tractor+2\" target=\"_blank\">Tractor project site</a> for an overview.</p>
+            <br>
+            <p>Blender is the free and open source 3D creation suite. It supports the entirety of the 3D pipeline—modeling, rigging, animation, simulation, rendering, compositing and motion tracking, even video editing and game creation.</p>
+            <br>
+            <p>See the <a href=\"https://www.blender.org/\" target=\"_blank\">Blender project site</a> for an overview.</p></td>
+          </tr>
+        </table>'''
+
+        [[[parameter Readme]]]
+        HideLabel = true
+        Config.Plugin = pico.widget.HtmlTemplateWidget
+        Config.Template := "Follow the instructions in the <a href=\"https://github.com/Azure/cyclecloud-tractor\" target=\"_blank\">README</a> for details on instructions on extending and configuring the Project for your environment."
+
+
+[parameters Required Settings]
+Order = 10
+
+    [[parameters Virtual Machines ]]
+    Description = "The cluster, in this case, has two roles: the Tractor Master (engine) host and the Execute (blade) hosts. Configure which VM types to use based on the requirements of your application."
+    Order = 20
+
+
+        [[[parameter Region]]]
+        Label = Region
+        Description = Deployment Location
+        ParameterType = Cloud.Region
+        DefaultValue = westus2
+        Order = 2
+
+        [[[parameter MasterMachineType]]]
+        Label = Master VM Type
+        Description = The VM type for scheduler master and shared filer.
+        ParameterType = Cloud.MachineType
+        DefaultValue = Standard_D12_v2
+        Order = 4
+
+        [[[parameter ExecuteMachineType]]]
+        Label = Execute VM Type
+        Description = The VM type for execute nodes
+        ParameterType = Cloud.MachineType
+        DefaultValue = Standard_F2s_v2
+        Config.Multiselect = true
+        Order = 6
+
+
+    [[parameters Auto-Scaling]]
+    Description = "The cluster can autoscale to the workload, adding execute hosts as jobs are queued. To enable this check the box below and choose the initial and maximum core counts for the cluster"
+    Order = 30
+
+        [[[parameter Autoscale]]]
+        Label = Autoscale
+        DefaultValue = true
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Start and stop execute instances automatically
+        Order = 2
+
+        [[[parameter MaxExecuteCoreCount]]]
+        Label = Max Cores
+        Description = The total number of execute cores to start
+        DefaultValue = 100
+        Config.Plugin = pico.form.NumberTextBox
+        Config.MinValue = 1
+        Config.IntegerOnly = true
+        Order = 4
+
+        [[[parameter UseLowPrio]]]
+        Label = Use Low Prio Instances
+        DefaultValue = false
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Use low priority instances for execute hosts
+        Order = 6
+
+    [[parameters Networking]]
+    Order = 40
+
+        [[[parameter SubnetId]]]
+        Label = Subnet ID
+        Description = Subnet Resource Path (ResourceGroup/VirtualNetwork/Subnet)
+        ParameterType = Azure.Subnet
+        Required = True
+        Order = 2
+
+        [[[parameter FileSystemClusterName]]]
+        Label = Filesystem Cluster
+        Description = The filesystem to mount
+        Config.Plugin = pico.form.QueryDropdown
+        Config.Query = select ClusterName as Name from Cloud.Node where cluster().IsTemplate =!= True && Configuration.role=?="sharedfs"
+        Config.SetDefault = false
+        Config.Required = true
+        Order = 4
+  
+
+        [[[parameter configuration_tractor_license_server_address]]]
+        required = True
+        label = Lic. Server Address
+        description = IP or Hostname of the Pixar License Server
+        Order = 6
+
+[parameters Advanced Settings]
+Order = 20
+
+    [[parameters Azure Settings]]
+    Order = 10 
+
+        [[[parameter Credentials]]]
+        Description = The credentials for the cloud provider
+        ParameterType = Cloud.Credentials
+
+
+    [[parameters Tractor]]
+    Description = Configure default Tractor settings
+    Order = 20
+    
+
+        [[[parameter configuration_tractor_license_server_port]]]
+        required = True
+        label = Lic. Server Port
+        description = Port number of the Pixar License Server
+        defaultvalue = 9010
+
+        [[[parameter configuration_tractor_engine_port]]]
+        required = True
+        label = Engine HTTP Port
+        description = Port number of the Tractor Engine UI
+        defaultvalue = 80
+
+   [[parameters Filesystem Configuration]]
+   Description = "Persistent Filesystem mount configuration"
+   Order = 30
+
+      [[[parameter MountPoint]]]
+      Label = Mount Point
+      Description = The path at which to mount the Filesystem
+      DefaultValue = /data
+
+      [[[parameter ExportPath]]]
+      Label = Export Path
+      Description = The path exported by the file system
+      DefaultValue = /mnt/exports/data
+
+
+
+
+    [[parameters Software]]
+    Description = "Specify the scheduling software, and base OS installed on all nodes, and optionally the cluster-init and chef versions from your Locker."
+    Order = 40
+
+        [[[parameter DefaultClusterInitSpecs]]]
+        Label = Default Cluster-Init Specs
+        Description = Cluster init specs to apply to all nodes
+        ParameterType = Cloud.ClusterInitSpecs
+
+        [[[parameter MasterClusterInitSpecs]]]
+        Label = Master Cluster-Init Specs
+        DefaultValue = =undefined
+        Description = Cluster init specs to apply to the master node
+        ParameterType = Cloud.ClusterInitSpecs
+    
+        [[[parameter ExecuteClusterInitSpecs]]]
+        Label = Execute Cluster-Init Specs
+        DefaultValue = =undefined
+        Description = Cluster init specs to apply to execute nodes
+        ParameterType = Cloud.ClusterInitSpecs
+	
+
+    [[parameters Advanced Networking]]
+    Description = Advanced networking settings
+    Order = 50
+
+        [[[parameter ReturnProxy]]]
+        Label = Return Proxy
+        DefaultValue = true
+        ParameterType = Boolean
+        Config.Label = Use SSH tunnel to connect to CycleCloud (required if direct access is blocked)
+
+        [[[parameter UsePublicNetwork]]]
+        Label = Public Head Node
+        DefaultValue = true
+        ParameterType = Boolean
+        Config.Label = Access master node from the Internet
+
+        [[[parameter KeyPairLocation]]]
+        Label = Keypair Path
+        Description = The path to the private SSH key to use for the `cyclecloud` user on linux nodes.
+        DefaultValue = ~/.ssh/cyclecloud.pem
+        Required = True
+

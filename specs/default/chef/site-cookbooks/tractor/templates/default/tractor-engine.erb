@@ -1,0 +1,15 @@
+# The following variables can be overridden in order to configure
+# the tractor-engine service.  This file is expected to be installed as
+# /etc/sysconfig/tractor-engine
+
+# BIN determines the directory containing the tractor-engine executable.
+#BIN=/opt/pixar/Tractor-<%= node['tractor']['version'] %>/bin
+
+# OPTIONS are the set of options passed to tractor-engine.
+# tractor-engine --help shows a list of possible options.
+#OPTIONS="--debug --log -"
+OPTIONS='<%= node['tractor']['engine']['cmd_options'] %>'
+
+# CONFIG specfies the configuration directory.
+#CONFIG=/var/spool/tractor
+CONFIG=<%= node['tractor']['config_dir'] %>
