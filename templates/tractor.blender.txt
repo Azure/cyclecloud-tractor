@@ -180,7 +180,7 @@ Order = 10
         Config.Plugin = pico.form.QueryDropdown
         Config.Query = select ClusterName as Name from Cloud.Node where cluster().IsTemplate =!= True && Configuration.role=?="sharedfs"
         Config.SetDefault = false
-        Config.Required = true
+        Required = true
         Order = 4
   
 
